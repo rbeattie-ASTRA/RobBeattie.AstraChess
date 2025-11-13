@@ -5,6 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Astra Chess Assistant</title>
   <link rel="stylesheet" href="style.css" />
+
+<style>
+  /* Modal container */
+  #helpModal {
+    display: none;
+    position: fixed;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 600px;
+    background-color: #fff;
+    border: 2px solid #444;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    z-index: 1000;
+    padding: 20px;
+    border-radius: 8px;
+    font-family: sans-serif;
+    color: #0077b3; /* Darker blue */
+    text-align: left; /* Align all modal text left */
+  }
+
+  /* Overlay background */
+  #modalOverlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+  }
+
+  /* Close button */
+  .closeBtn {
+    float: right;
+    font-size: 18px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #0077b3;
+  }
+
+  /* Help button */
+  #openHelpBtn {
+    margin: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  /* Help content */
+  #helpModal h2 {
+    margin-top: 0;
+    color: #0077b3;
+    text-align: center;
+  }
+
+  #helpModal ol {
+    padding-left: 20px;
+    margin-top: 10px;
+  }
+
+  #helpModal li {
+    margin-bottom: 12px;
+    padding-left: 4px;
+  }
+</style>
 </head>
 <body>
   <h1>Astra Chess Assistant</h1>
@@ -25,6 +92,46 @@
     <input type="text" id="fenInput" placeholder="Enter FEN string here" />
     <button onclick="loadPosition()">Load Position</button>
   </div>
+
+  <!-- Help Button -->
+  <button id="openHelpBtn">♟️ Help</button>
+
+  <!-- Modal Overlay -->
+  <div id="modalOverlay"></div>
+
+  <!-- Help Modal -->
+  <div id="helpModal">
+    <button class="closeBtn" onclick="closeHelp()">✖</button>
+    <h2>♟️ How to Use Astra Chess Assistant</h2>
+    <ol>
+  <li><strong>Choose a Starting Position</strong><br>Select “Start Position” for a standard chess setup, or “Custom FEN” to load any position using a FEN string.</li>
+  <li><strong>Enter a FEN String (Optional)</strong><br>Paste a valid FEN string into the input box to load a custom board layout. Click “Load Position” to apply.</li>
+  <li><strong>Drag and Drop Pieces</strong><br>Move pieces by dragging them from one square to another. Works best on desktop browsers.</li>
+  <li><strong>Right-Click to Add Pieces</strong><br>Right-click any empty square to open the piece picker. Click a piece to place it on the board.</li>
+  <li><strong>Export the Current Position</strong><br>Click “Export FEN” to copy the current board state to your clipboard. Share it or save it for later.</li>
+  <li><strong>Play with a Friend</strong><br>Share the website link with someone to play asynchronously. You can both update the board and exchange FENs.</li>
+  <li><strong>Remove Pieces</strong><br>Drag a piece off the board (outside the grid) to delete it. Useful for clearing mistakes or editing positions.</li>
+  <li><strong>Use on iPad/iOS (with caveats)</strong><br>Fully functional, but Unicode rendering may vary — especially for white pawns. Best viewed on desktop.</li>
+  <li><strong>Customize and Extend</strong><br>The assistant is modular. You can tweak the code to add timers, move validation, or voice input via Siri Shortcuts.</li>
+  <li><strong>Stay Version-Aware</strong><br>This is Ver 5.0 — stable and shareable. Future versions may include SVG rendering, mobile layout toggles, or AI move suggestions.</li>
+</ol>
+  </div>
+
+  <!-- Scripts -->
   <script src="chessboard.js"></script>
+  <script>
+    const modal = document.getElementById('helpModal');
+    const overlay = document.getElementById('modalOverlay');
+
+    document.getElementById('openHelpBtn').onclick = () => {
+      modal.style.display = 'block';
+      overlay.style.display = 'block';
+    };
+
+    function closeHelp() {
+      modal.style.display = 'none';
+      overlay.style.display = 'none';
+    }
+  </script>
 </body>
 </html>
