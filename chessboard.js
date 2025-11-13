@@ -17,8 +17,8 @@ function createBoard() {
       square.classList.add(isWhite ? "white" : "black");
       square.dataset.row = row;
       square.dataset.col = col;
-      square.addEventListener("dragover", allowDrop);
-      square.addEventListener("drop", drop);
+      square.setAttribute("ondrop", "drop(event)");
+      square.setAttribute("ondragover", "allowDrop(event)");
       board.appendChild(square);
     }
   }
@@ -37,9 +37,9 @@ function loadFEN(fen) {
         if (square) {
           const piece = document.createElement("div");
           piece.textContent = pieceSymbols[char] || "";
-          piece.classList.add("piece");
           piece.setAttribute("draggable", "true");
-          piece.addEventListener("dragstart", drag);
+          piece.classList.add("piece");
+          piece.setAttribute("ondragstart", "drag(event)");
           square.innerHTML = "";
           square.appendChild(piece);
         }
@@ -66,7 +66,6 @@ function allowDrop(ev) {
 }
 
 function drag(ev) {
-  ev.preventDefault();
   draggedFromSquare = ev.target.parentElement;
   ev.dataTransfer.setData("text", ev.target.textContent);
   ev.dataTransfer.setData("class", ev.target.className);
@@ -89,12 +88,13 @@ function drop(ev) {
     piece.textContent = data;
     piece.className = className;
     piece.setAttribute("draggable", "true");
-    piece.addEventListener("dragstart", drag);
+    piece.setAttribute("ondragstart", "drag(event)");
     target.appendChild(piece);
     draggedFromSquare = null;
   }
 }
 
+// Utility: Copy to clipboard
 function copyToClipboard(text) {
   const el = document.createElement("textarea");
   el.value = text;
@@ -105,6 +105,7 @@ function copyToClipboard(text) {
   alert("Copied to clipboard!");
 }
 
+// Utility: Generate FEN from current board
 function getCurrentFEN() {
   let fen = "";
   for (let row = 0; row < 8; row++) {
@@ -129,6 +130,7 @@ function getCurrentFEN() {
   return fen + " w KQkq - 0 1";
 }
 
+// UI: Add export button
 const exportBtn = document.createElement("button");
 exportBtn.textContent = "Export FEN";
 exportBtn.id = "exportFEN";
@@ -138,6 +140,7 @@ exportBtn.onclick = () => {
 };
 document.body.appendChild(exportBtn);
 
+// UI: Add copy icon to input field
 const inputField = document.getElementById("fenInput");
 if (inputField) {
   const copyIcon = document.createElement("span");
@@ -163,7 +166,7 @@ document.addEventListener("dragend", (ev) => {
     y <= boardRect.bottom;
 
   if (!insideBoard && draggedFromSquare) {
-    draggedFromSquare.innerHTML = "";
+    draggedFromSquare.innerHTML = ""; // Remove piece
     draggedFromSquare = null;
   }
 });
@@ -190,7 +193,7 @@ allPieces.forEach(([key, symbol]) => {
       piece.textContent = symbol;
       piece.className = "piece";
       piece.setAttribute("draggable", "true");
-      piece.addEventListener("dragstart", drag);
+      piece.setAttribute("ondragstart", "drag(event)");
       piecePicker.targetSquare.innerHTML = "";
       piecePicker.targetSquare.appendChild(piece);
     }
@@ -215,3 +218,5 @@ board.addEventListener("contextmenu", (ev) => {
 document.addEventListener("click", () => {
   piecePicker.style.display = "none";
 });
+
+
