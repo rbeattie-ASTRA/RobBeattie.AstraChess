@@ -140,19 +140,6 @@ exportBtn.onclick = () => {
 };
 document.body.appendChild(exportBtn);
 
-// UI: Add copy icon to input field
-const inputField = document.getElementById("fenInput");
-if (inputField) {
-  const copyIcon = document.createElement("span");
-  copyIcon.className = "copy-icon";
-  copyIcon.textContent = "📋";
-  copyIcon.title = "Copy input text";
-  copyIcon.onclick = () => {
-    copyToClipboard(inputField.value.trim());
-  };
-  inputField.parentNode.appendChild(copyIcon);
-}
-
 loadPosition();
 
 document.addEventListener("dragend", (ev) => {

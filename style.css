@@ -94,14 +94,3 @@ h1 {
   background-color: #666;
 }
 
-.copy-icon {
-  margin-left: 8px;
-  font-size: 18px;
-  cursor: pointer;
-  vertical-align: middle;
-  color: #ccc;
-}
-.copy-icon:hover {
-  color: #fff;
-}
-
