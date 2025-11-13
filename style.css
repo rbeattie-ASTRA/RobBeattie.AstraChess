@@ -32,6 +32,9 @@ h1 {
   font-weight: normal;
   user-select: none;
 }
+.piece {
+  font-family: "Quivira", "FreeSerif", "DejaVu Sans", sans-serif;
+}
 
 .white {
   background-color: #f5f5f5;
