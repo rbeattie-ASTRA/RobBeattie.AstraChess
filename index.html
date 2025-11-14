@@ -43,7 +43,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 55px;
+  font-size: 70px;
   font-weight: normal;
   user-select: none;
 }
@@ -144,6 +144,7 @@ h1 {
   cursor: pointer;
 }
 </style>
+
 </head>
 <body>
   <h1>Astra eChessBoard</h1>
@@ -185,8 +186,9 @@ h1 {
   <li><strong>Remove Pieces</strong><br>Drag a piece off the board (outside the grid) to delete it. Useful for clearing mistakes or editing positions.</li>
   <li><strong>Use on iPad (with caveats)</strong><br>Fully functional when using mouse. Unicode rendering may vary — especially for white pawns. Best viewed on desktop.</li>
   <li><strong>Customising</strong><br>Astra eChessBoard is free for non-commercial use. Please do not modify without attribution, please quote "Astra eChessBoard by Rob Beattie".</li>
-  <li><strong>Stay Version-Aware</strong><br>This is v6.1 — stable for desktop browsers. Future versions might have playback capabilities.</li>
+  <li><strong>Stay Version-Aware</strong><br>This is v6.2 — visually best in a Windows browser. Please provide feedback for other OS's / distros. Future versions might have playback capabilities. </li>
   <li><strong>Contact</strong><br>You can email me at rsbeattie@outlook.com put 'Astra eChessBoard' in subject field.</li>
+  <li><strong>History</strong><br>Astra eChessBoard was created to support my friend Duncan during a challenging time — a way to stay mentally engaged, uplifted, and connected through Chess.</li>
 </ol>
   </div>
 
@@ -369,13 +371,26 @@ document.addEventListener("dragend", (ev) => {
 
 const piecePicker = document.createElement("div");
 piecePicker.id = "piecePicker";
-piecePicker.style.display = "none";
 piecePicker.style.position = "absolute";
 piecePicker.style.background = "#222";
 piecePicker.style.border = "1px solid #888";
 piecePicker.style.padding = "5px";
 piecePicker.style.zIndex = "1000";
+piecePicker.style.flexDirection = "column";
+piecePicker.style.gap = "4px";
+piecePicker.style.display = "none"; // Hide AFTER layout styles
 document.body.appendChild(piecePicker);
+
+// Create two rows: one for white, one for black
+const whiteRow = document.createElement("div");
+whiteRow.style.display = "flex";
+whiteRow.style.justifyContent = "center";
+whiteRow.style.gap = "4px";
+
+const blackRow = document.createElement("div");
+blackRow.style.display = "flex";
+blackRow.style.justifyContent = "center";
+blackRow.style.gap = "4px";
 
 const allPieces = Object.entries(pieceSymbols);
 allPieces.forEach(([key, symbol]) => {
@@ -395,9 +410,17 @@ allPieces.forEach(([key, symbol]) => {
     }
     piecePicker.style.display = "none";
   };
-  piecePicker.appendChild(btn);
+
+  // Sort into white or black row based on key
+  if (key[0] === key[0].toUpperCase()) {
+    whiteRow.appendChild(btn); // White pieces
+  } else {
+    blackRow.appendChild(btn); // Black pieces
+  }
 });
 
+piecePicker.appendChild(whiteRow);
+piecePicker.appendChild(blackRow);
 board.addEventListener("contextmenu", (ev) => {
   ev.preventDefault();
   const square = ev.target.closest(".square");
