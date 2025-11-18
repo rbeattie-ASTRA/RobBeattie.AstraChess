@@ -58,9 +58,9 @@ h1 {
   color: #000;
 }
 
-/* When running on Safari, white-side piece glyphs will be tinted light blue */
+/* Safari-only tint for white-side pieces */
 body.safari .piece.white-side {
-  color: #add8e6; /* lightblue */
+  color: #add8e6 !important; /* lightblue */
 }
 
 .rank-labels {
@@ -235,20 +235,28 @@ const board = document.getElementById("chessboard");
 
 // ...existing code...
 
-// Browser detection: Safari
-function isSafariBrowser() {
-  const ua = navigator.userAgent || "";
-  // exclude Chrome/Edge/Firefox on iOS variants
-  return /^((?!chrome|crios|fxios|android).)*safari/i.test(ua);
-}
-const isSafari = isSafariBrowser();
-// add a class on body so CSS can target Safari-only styles
-if (isSafari) document.body.classList.add('safari');
-
-const pieceSymbols = {
+// Unicode piece symbols (default)
+const unicodePieceSymbols = {
   r: "♜", n: "♞", b: "♝", q: "♛", k: "♚", p: "♟",
   R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔", P: "♙"
 };
+
+// ASCII fallbacks for Safari
+const asciiPieceSymbols = {
+  r: "r", n: "n", b: "b", q: "q", k: "k", p: "p",
+  R: "R", N: "N", B: "B", Q: "Q", K: "K", P: "P"
+};
+
+// Detect Safari (excludes Chrome/Android/Firefox iOS builds)
+function isSafariBrowser() {
+  const ua = navigator.userAgent || "";
+  return /^((?!chrome|crios|fxios|android).)*safari/i.test(ua);
+}
+const isSafari = isSafariBrowser();
+if (isSafari) document.body.classList.add('safari');
+
+// Use ASCII on Safari, Unicode elsewhere (default)
+const pieceSymbols = isSafari ? asciiPieceSymbols : unicodePieceSymbols;
 
 let draggedFromSquare = null;
 
@@ -269,22 +277,17 @@ function createBoard() {
   }
 }
 
-function makePieceElement(symbol, side) {
+function makePieceElement(symbol, side, originalKey) {
   const piece = document.createElement("div");
   piece.textContent = symbol;
   piece.setAttribute("draggable", "true");
   piece.classList.add("piece");
-  // mark which side this piece belongs to: 'white' or 'black'
   piece.classList.add(side === 'white' ? 'white-side' : 'black-side');
   piece.dataset.side = side;
+  if (originalKey) piece.dataset.key = originalKey; // store original piece key for FEN export
   piece.setAttribute("ondragstart", "drag(event)");
-
-  // Safari-specific tint for white-side pieces
-  if (isSafari && side === 'white') {
-    // CSS class body.safari .piece.white-side handles color, but set inline fallback too
-    piece.style.color = piece.style.color || '#add8e6';
-  }
-
+  // Safari inline fallback color (CSS body.safari .piece.white-side also applies)
+  if (isSafari && side === 'white') piece.style.color = '#add8e6';
   return piece;
 }
 
@@ -300,7 +303,9 @@ function loadFEN(fen) {
         );
         if (square) {
           const side = char === char.toUpperCase() ? 'white' : 'black';
-          const piece = makePieceElement(pieceSymbols[char] || "", side);
+          const key = char; // original key (e.g. 'P' or 'p')
+          const symbol = pieceSymbols[key] || "";
+          const piece = makePieceElement(symbol, side, key);
           square.innerHTML = "";
           square.appendChild(piece);
         }
@@ -331,8 +336,8 @@ function drag(ev) {
   draggedFromSquare = pieceEl.parentElement;
   ev.dataTransfer.setData("text", pieceEl.textContent);
   ev.dataTransfer.setData("class", pieceEl.className);
-  // preserve side info so tint can be re-applied after drop
   ev.dataTransfer.setData("side", pieceEl.dataset.side || "");
+  ev.dataTransfer.setData("key", pieceEl.dataset.key || "");
 }
 
 function drop(ev) {
@@ -340,6 +345,7 @@ function drop(ev) {
   const data = ev.dataTransfer.getData("text");
   const className = ev.dataTransfer.getData("class");
   const side = ev.dataTransfer.getData("side");
+  const originalKey = ev.dataTransfer.getData("key"); // may be empty if created via picker
 
   let target = ev.target;
   if (!target.classList.contains("square")) {
@@ -354,14 +360,14 @@ function drop(ev) {
     piece.className = className;
     piece.setAttribute("draggable", "true");
     piece.setAttribute("ondragstart", "drag(event)");
-    // re-apply side marker and Safari tint if needed
     if (side) {
       piece.dataset.side = side;
       if (side === 'white') piece.classList.add('white-side');
       else piece.classList.add('black-side');
-      if (isSafari && side === 'white') piece.style.color = '#add8e6';
-      else piece.style.color = '';
     }
+    if (originalKey) piece.dataset.key = originalKey;
+    // re-apply Safari tint if white and safari
+    if (isSafari && piece.dataset.side === 'white') piece.style.color = '#add8e6';
     target.appendChild(piece);
     draggedFromSquare = null;
   }
@@ -380,6 +386,8 @@ function copyToClipboard(text) {
 
 // Utility: Generate FEN from current board
 function getCurrentFEN() {
+  // Build mapping from displayed symbol back to piece key
+  // Prefer dataset.key when available; otherwise look up by displayed text
   let fen = "";
   for (let row = 0; row < 8; row++) {
     let empty = 0;
@@ -391,8 +399,13 @@ function getCurrentFEN() {
           fen += empty;
           empty = 0;
         }
-        const symbol = Object.entries(pieceSymbols).find(([k, v]) => v === piece.textContent)?.[0];
-        fen += symbol || "";
+        // Prefer stored original key (P,p etc.)
+        let key = piece.dataset.key;
+        if (!key) {
+          // fallback: find key by matching piece.textContent to pieceSymbols values
+          key = Object.entries(pieceSymbols).find(([k, v]) => v === piece.textContent)?.[0] || "";
+        }
+        fen += key || "";
       } else {
         empty++;
       }
@@ -466,7 +479,7 @@ allPieces.forEach(([key, symbol]) => {
 
   btn.onclick = () => {
     if (piecePicker.targetSquare) {
-      const piece = makePieceElement(symbol, side);
+      const piece = makePieceElement(symbol, side, key);
       piecePicker.targetSquare.innerHTML = "";
       piecePicker.targetSquare.appendChild(piece);
     }
