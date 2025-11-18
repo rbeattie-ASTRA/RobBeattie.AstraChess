@@ -130,9 +130,9 @@ svg.piece-black text {
   <li><strong>Export the Current Position</strong><br>Click “Export FEN” to copy the current board state to your clipboard. Share it or save it for later.</li>
   <li><strong>Play with a Friend</strong><br>Share the website link with someone to play asynchronously. You can both update the board and exchange FENs.</li>
   <li><strong>Remove Pieces</strong><br>Drag a piece off the board (outside the grid) to delete it. Useful for clearing mistakes or editing positions.</li>
-  <li><strong>Use on iPad (with caveats)</strong><br>Fully functional when using mouse. Unicode rendering may vary — especially for white pawns. Best viewed on desktop.</li>
+  <li><strong>Use on iPad (with caveats)</strong><br>Fully functional when using mouse. Unicode/SVG piece rendering may vary in quality. Best viewed on Windows desktop browsers.</li>
   <li><strong>Customising</strong><br>Astra eChessBoard is free for non-commercial use. Please do not modify without attribution, please quote "Astra eChessBoard by Rob Beattie".</li>
-  <li><strong>Stay Version-Aware</strong><br>This is v6.6 — visually best in a Windows browser. Please provide feedback for other OS's / distros. Future versions might have playback capabilities. </li>
+  <li><strong>Stay Version-Aware</strong><br>This is v6.6. Please provide feedback for other OS's / distros. Future versions might have playback capabilities. </li>
   <li><strong>Contact</strong><br>You can email me at rsbeattie@outlook.com put 'Astra eChessBoard' in subject field.</li>
   <li><strong>History</strong><br>Astra eChessBoard was created to support my friend Duncan during a challenging time — a way to stay mentally engaged, uplifted, and connected through Chess.</li>
     </ol>
@@ -402,6 +402,26 @@ function closeHelp(){ modal.style.display='none'; overlay.style.display='none'; 
 /* init */
 createBoard();
 loadPosition();
+
+
+    function isSafari() {
+      return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    }
+
+    if (isSafari()) {
+      document.addEventListener("DOMContentLoaded", function() {
+        const svgBoard = document.querySelector("#chessboard");
+        if (svgBoard) {
+          svgBoard.style.userSelect = "none";
+          svgBoard.style.webkitUserSelect = "none";
+          svgBoard.style.touchAction = "none";
+        }
+      });
+    }
+ 
+
+
+
 </script>
 </body>
 </html>
