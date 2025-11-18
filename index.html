@@ -568,19 +568,20 @@ document.addEventListener("DOMContentLoaded", function() {
   const fenButton = document.getElementById("export-fen");
   let scrollLocked = false;
 
-  // Detect iOS/iPadOS Safari
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
   function lockScroll() {
     scrollLocked = true;
     document.documentElement.classList.add("scroll-locked");
     document.body.classList.add("scroll-locked");
+    console.log("Scroll locked");
   }
 
   function unlockScroll() {
     scrollLocked = false;
     document.documentElement.classList.remove("scroll-locked");
     document.body.classList.remove("scroll-locked");
+    console.log("Scroll unlocked");
   }
 
   function updateScrollLock() {
@@ -590,8 +591,14 @@ document.addEventListener("DOMContentLoaded", function() {
     if (fits) lockScroll(); else unlockScroll();
   }
 
-  // On iOS/iPadOS, block touch scroll globally when locked, except on pieces
   if (isIOS) {
+    // Trap touchstart/touchmove globally when locked
+    document.addEventListener("touchstart", function(e) {
+      if (!scrollLocked) return;
+      const isPiece = !!e.target.closest(".piece");
+      if (!isPiece) e.preventDefault();
+    }, { passive: false });
+
     document.addEventListener("touchmove", function(e) {
       if (!scrollLocked) return;
       const isPiece = !!e.target.closest(".piece");
@@ -604,7 +611,6 @@ document.addEventListener("DOMContentLoaded", function() {
   window.addEventListener("orientationchange", updateScrollLock);
 });
 </script>
-
 </body>
 
 
