@@ -143,6 +143,23 @@ h1 {
   font-size: 18px;
   cursor: pointer;
 }
+
+.controls {
+  margin-top: 20px;
+}
+
+/* Make the two radio option labels stack vertically */
+.controls label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.controls input[type="text"] {
+  width: 300px;
+  padding: 5px;
+  margin-left: 10px;
+}
+
 </style>
 
 </head>
@@ -211,10 +228,26 @@ h1 {
 
 const board = document.getElementById("chessboard");
 
-const pieceSymbols = {
+// Unicode piece symbols (default)
+const unicodePieceSymbols = {
   r: "♜", n: "♞", b: "♝", q: "♛", k: "♚", p: "♟",
   R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔", P: "♙"
 };
+
+// ASCII fallbacks for Safari
+const asciiPieceSymbols = {
+  r: "r", n: "n", b: "b", q: "q", k: "k", p: "p",
+  R: "R", N: "N", B: "B", Q: "Q", K: "K", P: "P"
+};
+
+// Detect Safari (excludes Chrome/Android/Firefox iOS builds)
+function isSafariBrowser() {
+  const ua = navigator.userAgent || "";
+  return /^((?!chrome|crios|fxios|android).)*safari/i.test(ua);
+}
+
+// Choose mapping based on browser: default unicode, fallback to ASCII on Safari
+const pieceSymbols = isSafariBrowser() ? asciiPieceSymbols : unicodePieceSymbols;
 
 let draggedFromSquare = null;
 
