@@ -58,6 +58,11 @@ h1 {
   color: #000;
 }
 
+/* When running on Safari, white-side piece glyphs will be tinted light blue */
+body.safari .piece.white-side {
+  color: #add8e6; /* lightblue */
+}
+
 .rank-labels {
   position: absolute;
   left: -30px;
@@ -228,26 +233,22 @@ h1 {
 
 const board = document.getElementById("chessboard");
 
-// Unicode piece symbols (default)
-const unicodePieceSymbols = {
+// ...existing code...
+
+// Browser detection: Safari
+function isSafariBrowser() {
+  const ua = navigator.userAgent || "";
+  // exclude Chrome/Edge/Firefox on iOS variants
+  return /^((?!chrome|crios|fxios|android).)*safari/i.test(ua);
+}
+const isSafari = isSafariBrowser();
+// add a class on body so CSS can target Safari-only styles
+if (isSafari) document.body.classList.add('safari');
+
+const pieceSymbols = {
   r: "♜", n: "♞", b: "♝", q: "♛", k: "♚", p: "♟",
   R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔", P: "♙"
 };
-
-// ASCII fallbacks for Safari
-const asciiPieceSymbols = {
-  r: "r", n: "n", b: "b", q: "q", k: "k", p: "p",
-  R: "R", N: "N", B: "B", Q: "Q", K: "K", P: "P"
-};
-
-// Detect Safari (excludes Chrome/Android/Firefox iOS builds)
-function isSafariBrowser() {
-  const ua = navigator.userAgent || "";
-  return /^((?!chrome|crios|fxios|android).)*safari/i.test(ua);
-}
-
-// Choose mapping based on browser: default unicode, fallback to ASCII on Safari
-const pieceSymbols = isSafariBrowser() ? asciiPieceSymbols : unicodePieceSymbols;
 
 let draggedFromSquare = null;
 
@@ -268,6 +269,25 @@ function createBoard() {
   }
 }
 
+function makePieceElement(symbol, side) {
+  const piece = document.createElement("div");
+  piece.textContent = symbol;
+  piece.setAttribute("draggable", "true");
+  piece.classList.add("piece");
+  // mark which side this piece belongs to: 'white' or 'black'
+  piece.classList.add(side === 'white' ? 'white-side' : 'black-side');
+  piece.dataset.side = side;
+  piece.setAttribute("ondragstart", "drag(event)");
+
+  // Safari-specific tint for white-side pieces
+  if (isSafari && side === 'white') {
+    // CSS class body.safari .piece.white-side handles color, but set inline fallback too
+    piece.style.color = piece.style.color || '#add8e6';
+  }
+
+  return piece;
+}
+
 function loadFEN(fen) {
   createBoard();
   const rows = fen.split(" ")[0].split("/");
@@ -279,11 +299,8 @@ function loadFEN(fen) {
           `.square[data-row="${rIdx}"][data-col="${col}"]`
         );
         if (square) {
-          const piece = document.createElement("div");
-          piece.textContent = pieceSymbols[char] || "";
-          piece.setAttribute("draggable", "true");
-          piece.classList.add("piece");
-          piece.setAttribute("ondragstart", "drag(event)");
+          const side = char === char.toUpperCase() ? 'white' : 'black';
+          const piece = makePieceElement(pieceSymbols[char] || "", side);
           square.innerHTML = "";
           square.appendChild(piece);
         }
@@ -310,15 +327,19 @@ function allowDrop(ev) {
 }
 
 function drag(ev) {
-  draggedFromSquare = ev.target.parentElement;
-  ev.dataTransfer.setData("text", ev.target.textContent);
-  ev.dataTransfer.setData("class", ev.target.className);
+  const pieceEl = ev.target;
+  draggedFromSquare = pieceEl.parentElement;
+  ev.dataTransfer.setData("text", pieceEl.textContent);
+  ev.dataTransfer.setData("class", pieceEl.className);
+  // preserve side info so tint can be re-applied after drop
+  ev.dataTransfer.setData("side", pieceEl.dataset.side || "");
 }
 
 function drop(ev) {
   ev.preventDefault();
   const data = ev.dataTransfer.getData("text");
   const className = ev.dataTransfer.getData("class");
+  const side = ev.dataTransfer.getData("side");
 
   let target = ev.target;
   if (!target.classList.contains("square")) {
@@ -333,6 +354,14 @@ function drop(ev) {
     piece.className = className;
     piece.setAttribute("draggable", "true");
     piece.setAttribute("ondragstart", "drag(event)");
+    // re-apply side marker and Safari tint if needed
+    if (side) {
+      piece.dataset.side = side;
+      if (side === 'white') piece.classList.add('white-side');
+      else piece.classList.add('black-side');
+      if (isSafari && side === 'white') piece.style.color = '#add8e6';
+      else piece.style.color = '';
+    }
     target.appendChild(piece);
     draggedFromSquare = null;
   }
@@ -431,13 +460,13 @@ allPieces.forEach(([key, symbol]) => {
   btn.textContent = symbol;
   btn.style.margin = "2px";
   btn.style.fontSize = "24px";
+
+  // determine side for button closure
+  const side = key[0] === key[0].toUpperCase() ? 'white' : 'black';
+
   btn.onclick = () => {
     if (piecePicker.targetSquare) {
-      const piece = document.createElement("div");
-      piece.textContent = symbol;
-      piece.className = "piece";
-      piece.setAttribute("draggable", "true");
-      piece.setAttribute("ondragstart", "drag(event)");
+      const piece = makePieceElement(symbol, side);
       piecePicker.targetSquare.innerHTML = "";
       piecePicker.targetSquare.appendChild(piece);
     }
@@ -445,7 +474,7 @@ allPieces.forEach(([key, symbol]) => {
   };
 
   // Sort into white or black row based on key
-  if (key[0] === key[0].toUpperCase()) {
+  if (side === 'white') {
     whiteRow.appendChild(btn); // White pieces
   } else {
     blackRow.appendChild(btn); // Black pieces
