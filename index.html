@@ -520,5 +520,41 @@ loadPosition();
 })();
 </script>
 
+  <script>
+document.addEventListener("DOMContentLoaded", function() {
+  const board = document.getElementById("chessboard");
+  const fenButton = document.getElementById("export-fen"); // assumes button has id="export-fen"
+
+  function updateScrollLock() {
+    if (!board) return;
+
+    // Only lock if the Export FEN button exists
+    if (!fenButton) {
+      document.documentElement.style.overflow = "auto";
+      document.body.style.overflow = "auto";
+      return;
+    }
+
+    const rect = board.getBoundingClientRect();
+    const fitsVertically = rect.height <= window.innerHeight;
+    const fitsHorizontally = rect.width <= window.innerWidth;
+
+    if (fitsVertically && fitsHorizontally) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "auto";
+      document.body.style.overflow = "auto";
+    }
+  }
+
+  updateScrollLock();
+  window.addEventListener("resize", updateScrollLock);
+  window.addEventListener("orientationchange", updateScrollLock);
+});
+</script>
+
 </body>
+
+
 </html>
