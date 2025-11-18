@@ -554,6 +554,55 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const board = document.getElementById("chessboard");
+  const fenButton = document.getElementById("export-fen");
+  let scrollLocked = false;
+
+  function lockScroll() {
+    scrollLocked = true;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.documentElement.classList.add("scroll-locked");
+  }
+
+  function unlockScroll() {
+    scrollLocked = false;
+    document.documentElement.style.overflow = "auto";
+    document.body.style.overflow = "auto";
+    document.documentElement.classList.remove("scroll-locked");
+  }
+
+  function updateScrollLock() {
+    if (!board || !fenButton) { unlockScroll(); return; }
+    const rect = board.getBoundingClientRect();
+    const fitsVertically = rect.height <= window.innerHeight;
+    const fitsHorizontally = rect.width <= window.innerWidth;
+    if (fitsVertically && fitsHorizontally) lockScroll(); else unlockScroll();
+  }
+
+  // Prevent page scroll when locked, except if touch is on a piece (allow drag)
+  document.addEventListener("touchmove", function(e) {
+    if (!scrollLocked) return;
+    const target = e.target;
+    const isPiece = !!target.closest(".piece");
+    if (isPiece) return; // let drag handlers work
+
+    // If touch is anywhere else (blank square or outside board), block page scroll
+    e.preventDefault();
+  }, { passive: false });
+
+  // Optional: tame iOS overscroll bounce when locked
+  // Add this CSS somewhere:
+  // html.scroll-locked { overscroll-behavior: none; }
+
+  updateScrollLock();
+  window.addEventListener("resize", updateScrollLock);
+  window.addEventListener("orientationchange", updateScrollLock);
+});
+</script>
+
 </body>
 
 
