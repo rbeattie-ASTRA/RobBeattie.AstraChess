@@ -402,91 +402,81 @@ function closeHelp(){ modal.style.display='none'; overlay.style.display='none'; 
 /* init */
 createBoard();
 loadPosition();
+</script>
 
+// new fix for long press etc
 
-    function isSafari() {
-      return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    }
+<script>
+(function() {
+  function isSafari() {
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  }
 
-    if (isSafari()) {
-      document.addEventListener("DOMContentLoaded", function() {
-        const svgBoard = document.querySelector("#chessboard");
-        if (svgBoard) {
-          svgBoard.style.userSelect = "none";
-          svgBoard.style.webkitUserSelect = "none";
-          svgBoard.style.touchAction = "none";
-        }
-      });
-    }
- 
-// touch script disable
+  if (!isSafari()) return; // bail out if not Safari
 
-
-function isSafari() {
-  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-}
-
-if (isSafari()) {
   document.addEventListener("DOMContentLoaded", function() {
     const board = document.querySelector("#chessboard");
     if (!board) return;
 
-    // Prevent text selection/scroll hijack
+    // Safari-specific style fixes
     board.style.userSelect = "none";
     board.style.webkitUserSelect = "none";
-    board.style.touchAction = "none";
+    board.style.touchAction = "manipulation"; // allow taps, block double-tap zoom
 
-    let longPressTimer = null;
+    let pressTimer = null;
+    let startX = 0, startY = 0;
 
-    // Touch start: check if target is a piece or blank square
-    board.addEventListener("touchstart", function(e) {
-      const t = e.changedTouches[0];
-      const target = e.target;
-
-      // If touching a piece → let your existing drag/pickup logic run
-      if (target.classList.contains("piece")) {
-        // optional: call your pickup function here
-        return;
-      }
-
-      // Otherwise, start long‑press timer for blank square
-      longPressTimer = setTimeout(() => {
-        const pt = board.createSVGPoint();
-        pt.x = t.clientX;
-        pt.y = t.clientY;
-        const ctm = board.getScreenCTM();
-        const svgPt = pt.matrixTransform(ctm.inverse());
-
-        // Call your piece selector popup
-        openPiecePopup(svgPt.x, svgPt.y, target);
-      }, 600); // 600ms long‑press threshold
-    }, { passive: false });
-
-    // Cancel long‑press if finger moves or lifts quickly
-    board.addEventListener("touchmove", function() {
-      clearTimeout(longPressTimer);
-    }, { passive: false });
-
-    board.addEventListener("touchend", function() {
-      clearTimeout(longPressTimer);
-    }, { passive: false });
-
-    board.addEventListener("touchcancel", function() {
-      clearTimeout(longPressTimer);
-    }, { passive: false });
-
-    // Stub for your popup logic
     function openPiecePopup(x, y, target) {
+      // Replace with your actual piece selector popup logic
       console.log("Popup at", x, y, target);
-      // Replace with your actual selector popup code
     }
+
+    function openPopupAtEvent(e) {
+      const pt = board.createSVGPoint();
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      const ctm = board.getScreenCTM();
+      const svgPt = ctm ? pt.matrixTransform(ctm.inverse()) : { x: e.clientX, y: e.clientY };
+      openPiecePopup(svgPt.x, svgPt.y, e.target);
+    }
+
+    board.addEventListener("pointerdown", function(e) {
+      if (e.pointerType === "mouse") return; // leave mouse alone
+      if (e.target.closest(".piece")) return; // let piece drag run
+
+      startX = e.clientX; startY = e.clientY;
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        openPopupAtEvent(e);
+        pressTimer = null;
+      }, 600); // long-press threshold
+      e.preventDefault();
+    }, { passive: false });
+
+    board.addEventListener("pointermove", function(e) {
+      if (e.pointerType === "mouse") return;
+      if (!pressTimer) return;
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+      if (dx + dy > 6) { clearTimeout(pressTimer); pressTimer = null; }
+      e.preventDefault();
+    }, { passive: false });
+
+    board.addEventListener("pointerup", function(e) {
+      if (e.pointerType === "mouse") return;
+      clearTimeout(pressTimer); pressTimer = null;
+      e.preventDefault();
+    }, { passive: false });
+
+    board.addEventListener("contextmenu", (e) => e.preventDefault(), { passive: false });
   });
-}
-
-
-// end touch script disable
-
-
+})();
 </script>
+
+
+
+// end new fix
+
+
 </body>
 </html>
