@@ -1,186 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Astra eChessBoard</title>
-  <link rel="stylesheet" href="style.css" />
-
 
 <style>
-/* Use locally installed 'Alpha' font with fallback */
-body, .square, #helpModal {
-  font-family: 'ChessAlpha', Arial, sans-serif;
+/* basic layout & fonts */
+body, .square, #helpModal { font-family: 'Segoe UI Symbol', 'DejaVu Sans', 'Noto Sans Symbols', Arial, sans-serif; }
+body { background:#111; color:#eee; text-align:center; padding:20px; }
+.board-wrapper { position:relative; display:inline-block; }
+#chessboard { display:grid; grid-template-columns:repeat(8,75px); grid-template-rows:repeat(8,75px); border:2px solid #888; }
+.square { width:75px; height:75px; display:flex; align-items:center; justify-content:center; user-select:none; overflow:visible; }
+.white { background:#f5f5f5; color:#000; }
+.black { background:#888; color:#000; }
+
+/* piece wrapper - increased sizes (30% larger) */
+.piece { display:flex; align-items:center; justify-content:center; width:90px; height:90px; cursor:grab; user-select:none; pointer-events:auto; }
+
+/* raise pieces on main board (30% size kept). 
+   Default raise for non-bishops = 5px up from previous lowered position (was translateY(15px) -> now 10px down).
+   Bishop (B/b) raised additional 5px (so translateY = 5px).
+*/
+.square .piece { transform: translateY(10px); }
+.square .piece[data-key="B"], .square .piece[data-key="b"] { transform: translateY(5px); }
+
+/* scale svg to square - 30% larger than previous 62px -> ~80px */
+.piece svg { width:80px; height:80px; pointer-events:none; }
+
+/* make bishops 80% of the current piece svg size (from 80pix to 62) */
+.square .piece[data-key="B"] svg,
+.square .piece[data-key="b"] svg {
+  width: 62px;
+  height: 62px;
 }
 
-/* Global styles */
-body {
-  background: #111;
-  color: #eee;
-  text-align: center;
-  padding: 20px;
+/* text based SVG styling (outline + fill) */
+svg.piece-white text {
+  fill: #ffffff;
+  stroke: #000000;
+  stroke-width: 2px;
+  paint-order: stroke fill;
+  vector-effect: non-scaling-stroke;
 }
 
-h1 {
-  margin-bottom: 10px;
+svg.piece-black text {
+  fill: #000000;
+  stroke: #ffffff;
+  stroke-width: 1.6px;
+  paint-order: stroke fill;
+  vector-effect: non-scaling-stroke;
 }
 
-.board-wrapper {
-  position: relative;
-  display: inline-block;
-}
+/* when black piece on dark square, soften outline */
+.square.black svg.piece-black text { stroke: #ddd; }
 
-#chessboard {
-  display: grid;
-  grid-template-columns: repeat(8, 75px);
-  grid-template-rows: repeat(8, 75px);
-  border: 2px solid #888;
-}
+/* controls & modal */
+.controls { margin-top:20px; }
+.controls label { display:block; margin-bottom:8px; }
+#fenInput { width:300px; padding:5px; margin-left:10px; }
+#exportFEN { margin-top:15px; padding:8px 16px; background:#444; color:#eee; border:1px solid #888; border-radius:4px; cursor:pointer; font-size:14px; }
 
-.square {
-  width: 75px;
-  height: 75px;
-  display: flex;
+/* piece picker button style (unicode glyphs) */
+.piecePickerButton {
+  background: #f0f0f0;
+  color: #000;
+  border: 1px solid #999;
+  padding: 6px;
+  margin: 4px;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 70px;
-  font-weight: normal;
-  user-select: none;
-}
-
-.white {
-  background-color: #f5f5f5;
-  color: #000;
-}
-
-.black {
-  background-color: #888;
-  color: #000;
-}
-
-/* Safari-only tint for white-side pieces */
-body.safari .piece.white-side {
-  color: #add8e6 !important; /* lightblue */
-}
-
-.rank-labels {
-  position: absolute;
-  left: -30px;
-  top: 0;
-  display: grid;
-  grid-template-rows: repeat(8, 75px);
-  height: 600px;
-  font-size: 14px;
-  color: #aaa;
-  align-items: center;
-  text-align: center;
-}
-
-.file-labels {
-  position: absolute;
-  top: 600px;
-  left: 0;
-  display: grid;
-  grid-template-columns: repeat(8, 75px);
-  height: 20px;
-  font-size: 14px;
-  color: #aaa;
-  text-align: center;
-  line-height: 20px;
-  padding-top: 5px;
-}
-
-.controls {
-  margin-top: 20px;
-}
-
-.controls input[type="text"] {
-  width: 300px;
-  padding: 5px;
-  margin-left: 10px;
-}
-
-#exportFEN {
-  margin-top: 15px;
-  padding: 8px 16px;
-  background-color: #444;
-  color: #eee;
-  border: 1px solid #888;
+  font-size: 28px;
+  line-height: 1;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
 }
 
-#exportFEN:hover {
-  background-color: #666;
-}
+/* darker alternate for better contrast if needed */
+.piecePickerButton.black { background:#222; color:#fff; border-color:#555; }
 
-/* Modal styles */
-#modalOverlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: none;
-  z-index: 999;
-}
+/* piece picker container and labels */
+#piecePicker { color:#eee; font-family:inherit; box-shadow:0 6px 18px rgba(0,0,0,.6); }
+.piecePickerRow { display:flex; padding:4px 6px 8px 6px; gap:6px; align-items:center; }
+.piecePickerLabel { color:#ddd; font-weight:700; padding:6px 6px 2px 6px; font-size:13px; white-space:nowrap; }
 
-#helpModal {
-  position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 600px;
-  width: 90%;
-  display: none;
-  z-index: 1000;
-  color: #0077cc;
-  text-align: left;
-}
-
-.closeBtn {
-  position: absolute;
-  top: 10px; right: 10px;
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-}
-
-.controls {
-  margin-top: 20px;
-}
-
-/* Make the two radio option labels stack vertically */
-.controls label {
-  display: block;
-  margin-bottom: 8px;
-}
-
-.controls input[type="text"] {
-  width: 300px;
-  padding: 5px;
-  margin-left: 10px;
-}
-
+/* modal overlay & help */
+#modalOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); display:none; z-index:999; }
+#helpModal { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; padding:20px; border-radius:8px; max-width:600px; width:90%; display:none; z-index:1000; color:#0077cc; text-align:left; }
+.closeBtn { position:absolute; top:10px; right:10px; background:none; border:none; font-size:18px; cursor:pointer; }
 </style>
-
 </head>
 <body>
   <h1>Astra eChessBoard</h1>
-  <p style="margin-top: -5px; font-size: 14px; color: #888;">by Rob Beattie</p>
+  <p style="margin-top:-5px; font-size:14px; color:#888;">by Rob Beattie</p>
 
   <div class="board-wrapper">
-    <div class="rank-labels">
+    <div class="rank-labels" style="position:absolute; left:-30px; top:0; display:grid; grid-template-rows:repeat(8,75px); height:600px; font-size:14px; color:#aaa; align-items:center; text-align:center;">
       <div>8</div><div>7</div><div>6</div><div>5</div><div>4</div><div>3</div><div>2</div><div>1</div>
     </div>
+
     <div id="chessboard"></div>
-    <div class="file-labels">
+
+    <div class="file-labels" style="position:absolute; top:600px; left:0; display:grid; grid-template-columns:repeat(8,75px); height:20px; font-size:14px; color:#aaa; text-align:center; line-height:20px; padding-top:5px;">
       <div>a</div><div>b</div><div>c</div><div>d</div><div>e</div><div>f</div><div>g</div><div>h</div>
     </div>
   </div>
+
   <div class="controls">
     <label><input type="radio" name="position" value="start" checked> Initial Board Position</label>
     <label><input type="radio" name="position" value="fen"> Input FEN Position</label>
@@ -188,18 +116,14 @@ body.safari .piece.white-side {
     <button onclick="loadPosition()">Load Position</button>
   </div>
 
-  <!-- Help Button -->
   <button id="openHelpBtn">♟️ Help</button>
-
-  <!-- Modal Overlay -->
   <div id="modalOverlay"></div>
 
-  <!-- Help Modal -->
   <div id="helpModal">
     <button class="closeBtn" onclick="closeHelp()">✖</button>
     <h2>♟️ How to Use Astra eChessBoard</h2>
     <ol>
-  <li><strong>Choose a Starting Position</strong><br>Select “Start Position” for a standard chess setup, or “Custom FEN” to load any position using a FEN string.</li>
+       <li><strong>Choose a Starting Position</strong><br>Select “Start Position” for a standard chess setup, or “Custom FEN” to load any position using a FEN string.</li>
   <li><strong>Enter a FEN String (Optional)</strong><br>Paste a valid FEN string into the input box to load a custom board layout. Click “Load Position” to apply.</li>
   <li><strong>Drag and Drop Pieces</strong><br>Move pieces by dragging them from one square to another. Works best on desktop browsers.</li>
   <li><strong>Right-Click to Add Pieces</strong><br>Right-click any empty square to open the piece picker. Click a piece to place it on the board.</li>
@@ -208,110 +132,91 @@ body.safari .piece.white-side {
   <li><strong>Remove Pieces</strong><br>Drag a piece off the board (outside the grid) to delete it. Useful for clearing mistakes or editing positions.</li>
   <li><strong>Use on iPad (with caveats)</strong><br>Fully functional when using mouse. Unicode rendering may vary — especially for white pawns. Best viewed on desktop.</li>
   <li><strong>Customising</strong><br>Astra eChessBoard is free for non-commercial use. Please do not modify without attribution, please quote "Astra eChessBoard by Rob Beattie".</li>
-  <li><strong>Stay Version-Aware</strong><br>This is v6.2 — visually best in a Windows browser. Please provide feedback for other OS's / distros. Future versions might have playback capabilities. </li>
+  <li><strong>Stay Version-Aware</strong><br>This is v6.6 — visually best in a Windows browser. Please provide feedback for other OS's / distros. Future versions might have playback capabilities. </li>
   <li><strong>Contact</strong><br>You can email me at rsbeattie@outlook.com put 'Astra eChessBoard' in subject field.</li>
   <li><strong>History</strong><br>Astra eChessBoard was created to support my friend Duncan during a challenging time — a way to stay mentally engaged, uplifted, and connected through Chess.</li>
-</ol>
+    </ol>
   </div>
 
-  <!-- Scripts -->
-
-  <script>
-    const modal = document.getElementById('helpModal');
-    const overlay = document.getElementById('modalOverlay');
-
-    document.getElementById('openHelpBtn').onclick = () => {
-      modal.style.display = 'block';
-      overlay.style.display = 'block';
-    };
-
-    function closeHelp() {
-      modal.style.display = 'none';
-      overlay.style.display = 'none';
-    }
- 
-
-const board = document.getElementById("chessboard");
-
-// ...existing code...
-
-// Unicode piece symbols (default)
-const unicodePieceSymbols = {
-  r: "♜", n: "♞", b: "♝", q: "♛", k: "♚", p: "♟",
-  R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔", P: "♙"
-};
-
-// ASCII fallbacks for Safari
-const asciiPieceSymbols = {
-  r: "r", n: "n", b: "b", q: "q", k: "k", p: "p",
-  R: "R", N: "N", B: "B", Q: "Q", K: "K", P: "P"
-};
-
-// Detect Safari (excludes Chrome/Android/Firefox iOS builds)
-function isSafariBrowser() {
-  const ua = navigator.userAgent || "";
-  return /^((?!chrome|crios|fxios|android).)*safari/i.test(ua);
+<script>
+function svgForGlyph(ch, cls) {
+  const esc = ch;
+  return `<svg class="piece-svg ${cls}" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${ch}"><text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" font-size="60" font-family="Segoe UI Symbol, DejaVu Sans, Noto Sans Symbols, Symbola, Arial">${esc}</text></svg>`;
 }
-const isSafari = isSafariBrowser();
-if (isSafari) document.body.classList.add('safari');
 
-// Use ASCII on Safari, Unicode elsewhere (default)
-const pieceSymbols = isSafari ? asciiPieceSymbols : unicodePieceSymbols;
+const SVG_PIECES = {
+  'K': svgForGlyph('\u2654','piece-white'),
+  'Q': svgForGlyph('\u2655','piece-white'),
+  'R': svgForGlyph('\u2656','piece-white'),
+  'B': svgForGlyph('\u2657','piece-white'),
+  'N': svgForGlyph('\u2658','piece-white'),
+  'P': svgForGlyph('\u2659','piece-white'),
+  'k': svgForGlyph('\u265A','piece-black'),
+  'q': svgForGlyph('\u265B','piece-black'),
+  'r': svgForGlyph('\u265C','piece-black'),
+  'b': svgForGlyph('\u265D','piece-black'),
+  'n': svgForGlyph('\u265E','piece-black'),
+  'p': svgForGlyph('\u265F','piece-black')
+};
+
+const GLYPHS = {
+  'K':'\u2654','Q':'\u2655','R':'\u2656','B':'\u2657','N':'\u2658','P':'\u2659',
+  'k':'\u265A','q':'\u265B','r':'\u265C','b':'\u265D','n':'\u265E','p':'\u265F'
+};
+
+const board = document.getElementById('chessboard');
+const pieceSymbols = SVG_PIECES;
 
 let draggedFromSquare = null;
 
 function createBoard() {
-  board.innerHTML = "";
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const square = document.createElement("div");
-      square.classList.add("square");
-      const isWhite = (row + col) % 2 === 0;
-      square.classList.add(isWhite ? "white" : "black");
-      square.dataset.row = row;
-      square.dataset.col = col;
-      square.setAttribute("ondrop", "drop(event)");
-      square.setAttribute("ondragover", "allowDrop(event)");
-      board.appendChild(square);
+  board.innerHTML = '';
+  for (let row=0; row<8; row++) {
+    for (let col=0; col<8; col++) {
+      const sq = document.createElement('div');
+      sq.classList.add('square');
+      const white = (row+col)%2===0;
+      sq.classList.add(white ? 'white' : 'black');
+      sq.dataset.row = row;
+      sq.dataset.col = col;
+      sq.setAttribute('ondrop','drop(event)');
+      sq.setAttribute('ondragover','allowDrop(event)');
+      board.appendChild(sq);
     }
   }
 }
 
-function makePieceElement(symbol, side, originalKey) {
-  const piece = document.createElement("div");
-  piece.textContent = symbol;
-  piece.setAttribute("draggable", "true");
-  piece.classList.add("piece");
-  piece.classList.add(side === 'white' ? 'white-side' : 'black-side');
-  piece.dataset.side = side;
-  if (originalKey) piece.dataset.key = originalKey; // store original piece key for FEN export
-  piece.setAttribute("ondragstart", "drag(event)");
-  // Safari inline fallback color (CSS body.safari .piece.white-side also applies)
-  if (isSafari && side === 'white') piece.style.color = '#add8e6';
-  return piece;
+function makePieceElement(symbolHTML, side, originalKey) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = symbolHTML || '';
+  wrapper.classList.add('piece');
+  wrapper.classList.add(side === 'white' ? 'white-side' : 'black-side');
+  wrapper.setAttribute('draggable','true');
+  if (originalKey) wrapper.dataset.key = originalKey;
+  wrapper.dataset.side = side;
+  wrapper.addEventListener('dragstart', drag);
+  return wrapper;
 }
 
 function loadFEN(fen) {
   createBoard();
-  const rows = fen.split(" ")[0].split("/");
-  rows.forEach((row, rIdx) => {
+  const rows = fen.split(' ')[0].split('/');
+  rows.forEach((rStr, rIdx) => {
     let col = 0;
-    for (let char of row) {
-      if (isNaN(char)) {
-        const square = board.querySelector(
-          `.square[data-row="${rIdx}"][data-col="${col}"]`
-        );
-        if (square) {
-          const side = char === char.toUpperCase() ? 'white' : 'black';
-          const key = char; // original key (e.g. 'P' or 'p')
-          const symbol = pieceSymbols[key] || "";
-          const piece = makePieceElement(symbol, side, key);
-          square.innerHTML = "";
-          square.appendChild(piece);
+    for (const ch of rStr) {
+      if (isNaN(ch)) {
+        const sq = board.querySelector(`.square[data-row="${rIdx}"][data-col="${col}"]`);
+        if (sq) {
+          const side = ch === ch.toUpperCase() ? 'white' : 'black';
+          const key = ch;
+          const svg = pieceSymbols[key] || '';
+          const piece = makePieceElement(svg, side, key);
+          sq.innerHTML = '';
+          sq.appendChild(piece);
         }
         col++;
       } else {
-        col += parseInt(char);
+        col += parseInt(ch,10);
       }
     }
   });
@@ -319,213 +224,184 @@ function loadFEN(fen) {
 
 function loadPosition() {
   const selected = document.querySelector('input[name="position"]:checked').value;
-  const fenInput = document.getElementById("fenInput").value.trim();
-  if (selected === "start") {
-    loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  const fenInput = document.getElementById('fenInput').value.trim();
+  if (selected === 'start') {
+    loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   } else if (fenInput) {
     loadFEN(fenInput);
   }
 }
 
-function allowDrop(ev) {
-  ev.preventDefault();
-}
+function allowDrop(ev){ ev.preventDefault(); }
 
 function drag(ev) {
-  const pieceEl = ev.target;
+  const pieceEl = ev.target.closest('.piece') || ev.target;
   draggedFromSquare = pieceEl.parentElement;
-  ev.dataTransfer.setData("text", pieceEl.textContent);
-  ev.dataTransfer.setData("class", pieceEl.className);
-  ev.dataTransfer.setData("side", pieceEl.dataset.side || "");
-  ev.dataTransfer.setData("key", pieceEl.dataset.key || "");
+  ev.dataTransfer.setData('text/html', pieceEl.innerHTML);
+  ev.dataTransfer.setData('key', pieceEl.dataset.key || '');
+  ev.dataTransfer.setData('side', pieceEl.dataset.side || '');
 }
 
 function drop(ev) {
   ev.preventDefault();
-  const data = ev.dataTransfer.getData("text");
-  const className = ev.dataTransfer.getData("class");
-  const side = ev.dataTransfer.getData("side");
-  const originalKey = ev.dataTransfer.getData("key"); // may be empty if created via picker
-
+  const originalKey = ev.dataTransfer.getData('key');
+  const side = ev.dataTransfer.getData('side') || 'white';
+  const draggedHtml = ev.dataTransfer.getData('text/html') || '';
   let target = ev.target;
-  if (!target.classList.contains("square")) {
-    target = target.closest(".square");
-  }
-
+  if (!target.classList.contains('square')) target = target.closest('.square');
   if (target && draggedFromSquare) {
-    draggedFromSquare.innerHTML = "";
-    target.innerHTML = "";
-    const piece = document.createElement("div");
-    piece.textContent = data;
-    piece.className = className;
-    piece.setAttribute("draggable", "true");
-    piece.setAttribute("ondragstart", "drag(event)");
-    if (side) {
-      piece.dataset.side = side;
-      if (side === 'white') piece.classList.add('white-side');
-      else piece.classList.add('black-side');
-    }
-    if (originalKey) piece.dataset.key = originalKey;
-    // re-apply Safari tint if white and safari
-    if (isSafari && piece.dataset.side === 'white') piece.style.color = '#add8e6';
+    draggedFromSquare.innerHTML = '';
+    target.innerHTML = '';
+    const symbolHTML = (originalKey && pieceSymbols[originalKey]) ? pieceSymbols[originalKey] : draggedHtml;
+    const piece = makePieceElement(symbolHTML, side, originalKey || '');
     target.appendChild(piece);
     draggedFromSquare = null;
   }
 }
 
-// Utility: Copy to clipboard
 function copyToClipboard(text) {
-  const el = document.createElement("textarea");
+  const el = document.createElement('textarea');
   el.value = text;
   document.body.appendChild(el);
   el.select();
-  document.execCommand("copy");
+  document.execCommand('copy');
   document.body.removeChild(el);
-  alert("Copied to clipboard!");
+  alert('Copied to clipboard!');
 }
 
-// Utility: Generate FEN from current board
 function getCurrentFEN() {
-  // Build mapping from displayed symbol back to piece key
-  // Prefer dataset.key when available; otherwise look up by displayed text
-  let fen = "";
-  for (let row = 0; row < 8; row++) {
+  let fen = '';
+  for (let row=0; row<8; row++) {
     let empty = 0;
-    for (let col = 0; col < 8; col++) {
-      const square = board.querySelector(`.square[data-row="${row}"][data-col="${col}"]`);
-      const piece = square?.querySelector(".piece");
+    for (let col=0; col<8; col++) {
+      const sq = board.querySelector(`.square[data-row="${row}"][data-col="${col}"]`);
+      const piece = sq?.querySelector('.piece');
       if (piece) {
-        if (empty > 0) {
-          fen += empty;
-          empty = 0;
-        }
-        // Prefer stored original key (P,p etc.)
+        if (empty>0) { fen += empty; empty=0; }
         let key = piece.dataset.key;
         if (!key) {
-          // fallback: find key by matching piece.textContent to pieceSymbols values
-          key = Object.entries(pieceSymbols).find(([k, v]) => v === piece.textContent)?.[0] || "";
+          const html = piece.innerHTML.trim();
+          key = Object.entries(SVG_PIECES).find(([k,v]) => v.trim()===html)?.[0] || '';
         }
-        fen += key || "";
-      } else {
-        empty++;
-      }
+        fen += key || '';
+      } else empty++;
     }
-    if (empty > 0) fen += empty;
-    if (row < 7) fen += "/";
+    if (empty>0) fen += empty;
+    if (row<7) fen += '/';
   }
-  return fen + " w KQkq - 0 1";
+  return fen + ' w KQkq - 0 1';
 }
 
-// UI: Add export button
-const exportBtn = document.createElement("button");
-exportBtn.textContent = "Export FEN";
-exportBtn.id = "exportFEN";
-exportBtn.onclick = () => {
-  const fen = getCurrentFEN();
-  copyToClipboard(fen);
-};
+/* export button */
+const exportBtn = document.createElement('button');
+exportBtn.textContent = 'Export FEN';
+exportBtn.id = 'exportFEN';
+exportBtn.onclick = () => { copyToClipboard(getCurrentFEN()); };
 document.body.appendChild(exportBtn);
 
-loadPosition();
-
-document.addEventListener("dragend", (ev) => {
-  const x = ev.clientX;
-  const y = ev.clientY;
-  const boardRect = board.getBoundingClientRect();
-  const insideBoard =
-    x >= boardRect.left &&
-    x <= boardRect.right &&
-    y >= boardRect.top &&
-    y <= boardRect.bottom;
-
-  if (!insideBoard && draggedFromSquare) {
-    draggedFromSquare.innerHTML = ""; // Remove piece
-    draggedFromSquare = null;
-  }
-});
-
-const piecePicker = document.createElement("div");
-piecePicker.id = "piecePicker";
-piecePicker.style.position = "absolute";
-piecePicker.style.background = "#222";
-piecePicker.style.border = "1px solid #888";
-piecePicker.style.padding = "5px";
-piecePicker.style.zIndex = "1000";
-piecePicker.style.flexDirection = "column";
-piecePicker.style.gap = "4px";
-piecePicker.style.display = "none"; // Hide AFTER layout styles
+/* piece picker - use unicode glyphs for buttons so they always display */
+const piecePicker = document.createElement('div');
+piecePicker.id = 'piecePicker';
+piecePicker.style.position = 'absolute';
+piecePicker.style.background = '#222';
+piecePicker.style.border = '1px solid #888';
+piecePicker.style.padding = '6px';
+piecePicker.style.display = 'none';
+piecePicker.style.zIndex = '1000';
+piecePicker.style.borderRadius = '6px';
 document.body.appendChild(piecePicker);
 
-// Create two rows: one for white, one for black
-const whiteRow = document.createElement("div");
-whiteRow.style.display = "flex";
-whiteRow.style.justifyContent = "center";
-whiteRow.style.gap = "4px";
+const whiteRow = document.createElement('div'); whiteRow.className='piecePickerRow';
+const blackRow = document.createElement('div'); blackRow.className='piecePickerRow';
 
-const blackRow = document.createElement("div");
-blackRow.style.display = "flex";
-blackRow.style.justifyContent = "center";
-blackRow.style.gap = "4px";
+const whiteLabel = document.createElement('div');
+whiteLabel.className = 'piecePickerLabel';
+whiteLabel.textContent = 'White:';
+const blackLabel = document.createElement('div');
+blackLabel.className = 'piecePickerLabel';
+blackLabel.textContent = 'Black:';
 
-const allPieces = Object.entries(pieceSymbols);
-allPieces.forEach(([key, symbol]) => {
-  const btn = document.createElement("button");
-  btn.textContent = symbol;
-  btn.style.margin = "2px";
-  btn.style.fontSize = "24px";
-
-  // determine side for button closure
-  const side = key[0] === key[0].toUpperCase() ? 'white' : 'black';
-
-  btn.onclick = () => {
+Object.entries(GLYPHS).forEach(([key, glyph]) => {
+  const btn = document.createElement('button');
+  btn.className = 'piecePickerButton';
+  btn.textContent = glyph;
+  if (key === key.toLowerCase()) {
+    btn.classList.add('black');
+  }
+  btn.addEventListener('click', () => {
     if (piecePicker.targetSquare) {
-      const piece = makePieceElement(symbol, side, key);
-      piecePicker.targetSquare.innerHTML = "";
+      const side = key[0]===key[0].toUpperCase()? 'white':'black';
+      const svgHTML = pieceSymbols[key] || (`<svg class="piece-svg ${side==='white'?'piece-white':'piece-black'}" viewBox="0 0 64 64"><text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" font-size="60">${glyph}</text></svg>`);
+      const piece = makePieceElement(svgHTML, side, key);
+      piecePicker.targetSquare.innerHTML = '';
       piecePicker.targetSquare.appendChild(piece);
     }
-    piecePicker.style.display = "none";
-  };
-
-  // Sort into white or black row based on key
-  if (side === 'white') {
-    whiteRow.appendChild(btn); // White pieces
-  } else {
-    blackRow.appendChild(btn); // Black pieces
-  }
+    piecePicker.style.display = 'none';
+  });
+  if (key[0] === key[0].toUpperCase()) whiteRow.appendChild(btn); else blackRow.appendChild(btn);
 });
 
+piecePicker.appendChild(whiteLabel);
 piecePicker.appendChild(whiteRow);
+piecePicker.appendChild(blackLabel);
 piecePicker.appendChild(blackRow);
-board.addEventListener("contextmenu", (ev) => {
+
+/* show piece picker centered horizontally under the right-click location (selector) */
+board.addEventListener('contextmenu', (ev) => {
   ev.preventDefault();
-  const square = ev.target.closest(".square");
-  if (square && square.children.length === 0) {
-    piecePicker.style.left = `${ev.pageX}px`;
-    piecePicker.style.top = `${ev.pageY}px`;
-    piecePicker.style.display = "block";
-    piecePicker.targetSquare = square;
-  } else {
-    piecePicker.style.display = "none";
-  }
+  const sq = ev.target.closest('.square');
+  if (!(sq && sq.children.length===0)) { piecePicker.style.display = 'none'; return; }
+
+  // show hidden to measure, keep invisible so there's no flicker
+  piecePicker.style.display = 'block';
+  piecePicker.style.visibility = 'hidden';
+
+  // small delay to ensure layout measured correctly
+  requestAnimationFrame(() => {
+    const pickerW = piecePicker.offsetWidth;
+    const pickerH = piecePicker.offsetHeight;
+
+    // center picker horizontally under the "selector" (ev.pageX)
+    let left = ev.pageX - Math.round(pickerW/2);
+    // clamp to viewport with a small margin
+    const margin = 8;
+    left = Math.max(margin, Math.min(left, window.innerWidth - pickerW - margin));
+
+    // prefer to place top just below click; if not enough space, place above selector
+    let top = ev.pageY + 6;
+    if (top + pickerH + margin > window.innerHeight) {
+      top = ev.pageY - pickerH - 6;
+    }
+    // clamp vertical as well
+    top = Math.max(margin, Math.min(top, window.innerHeight - pickerH - margin));
+
+    piecePicker.style.left = `${left}px`;
+    piecePicker.style.top = `${top}px`;
+    piecePicker.style.visibility = 'visible';
+    piecePicker.targetSquare = sq;
+  });
 });
 
-document.addEventListener("click", () => {
-  piecePicker.style.display = "none";
-});
- </script>
-
-<script>
-document.getElementById('openHelpBtn').addEventListener('click', function() {
-  document.getElementById('helpModal').style.display = 'block';
-  document.getElementById('modalOverlay').style.display = 'block';
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#piecePicker')) piecePicker.style.display = 'none';
 });
 
-function closeHelp() {
-  document.getElementById('helpModal').style.display = 'none';
-  document.getElementById('modalOverlay').style.display = 'none';
-}
+document.addEventListener('dragend', (ev) => {
+  const x = ev.clientX, y = ev.clientY;
+  const rect = board.getBoundingClientRect();
+  const inside = x>=rect.left && x<=rect.right && y>=rect.top && y<=rect.bottom;
+  if (!inside && draggedFromSquare) { draggedFromSquare.innerHTML=''; draggedFromSquare=null; }
+});
+
+/* help modal */
+const modal = document.getElementById('helpModal');
+const overlay = document.getElementById('modalOverlay');
+document.getElementById('openHelpBtn').onclick = () => { modal.style.display='block'; overlay.style.display='block'; };
+function closeHelp(){ modal.style.display='none'; overlay.style.display='none'; }
+
+/* init */
+createBoard();
+loadPosition();
 </script>
-
-
 </body>
 </html>
