@@ -421,93 +421,68 @@ loadPosition();
  
 // touch script disable
 
-(function initPopupTrigger() {
-  const board = document.querySelector('#chessboard');
-  if (!board) return;
 
-  board.style.userSelect = 'none';
-  board.style.webkitUserSelect = 'none';
-  board.style.touchAction = 'manipulation';
+function isSafari() {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
 
-  function openPiecePopup(x, y, target) {
-    console.log('open popup at', x, y, target);
-    // your popup logic here
-  }
+if (isSafari()) {
+  document.addEventListener("DOMContentLoaded", function() {
+    const board = document.querySelector("#chessboard");
+    if (!board) return;
 
-  let downPos = null;
-  let downTime = 0;
-  const TAP_MOVE_THRESHOLD = 6;
-  const TAP_TIME_THRESHOLD = 300;
+    // Prevent text selection/scroll hijack
+    board.style.userSelect = "none";
+    board.style.webkitUserSelect = "none";
+    board.style.touchAction = "none";
 
-  board.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'mouse') {
-      // Let your existing drag code run normally
-      return;
-    }
-    // Touch start
-    downPos = { x: e.clientX, y: e.clientY };
-    downTime = performance.now();
-    e.preventDefault();
-    board.setPointerCapture?.(e.pointerId);
-  }, { passive: false });
+    let longPressTimer = null;
 
-  board.addEventListener('pointerup', (e) => {
-    if (e.pointerType === 'mouse') {
-      // Mouse release → handled by your drag code
-      return;
-    }
-    if (!downPos) return;
-    const dt = performance.now() - downTime;
-    const dx = Math.abs(e.clientX - downPos.x);
-    const dy = Math.abs(e.clientY - downPos.y);
-    const moved = (dx + dy) > TAP_MOVE_THRESHOLD;
-    const quick = dt < TAP_TIME_THRESHOLD;
+    // Touch start: check if target is a piece or blank square
+    board.addEventListener("touchstart", function(e) {
+      const t = e.changedTouches[0];
+      const target = e.target;
 
-    if (!moved && quick) {
-      const pt = board.createSVGPoint?.();
-      let x = e.clientX, y = e.clientY;
-      if (pt && board.getScreenCTM) {
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const ctm = board.getScreenCTM();
-        if (ctm && ctm.inverse) {
-          const svgPt = pt.matrixTransform(ctm.inverse());
-          x = svgPt.x;
-          y = svgPt.y;
-        }
+      // If touching a piece → let your existing drag/pickup logic run
+      if (target.classList.contains("piece")) {
+        // optional: call your pickup function here
+        return;
       }
-      openPiecePopup(x, y, e.target);
+
+      // Otherwise, start long‑press timer for blank square
+      longPressTimer = setTimeout(() => {
+        const pt = board.createSVGPoint();
+        pt.x = t.clientX;
+        pt.y = t.clientY;
+        const ctm = board.getScreenCTM();
+        const svgPt = pt.matrixTransform(ctm.inverse());
+
+        // Call your piece selector popup
+        openPiecePopup(svgPt.x, svgPt.y, target);
+      }, 600); // 600ms long‑press threshold
+    }, { passive: false });
+
+    // Cancel long‑press if finger moves or lifts quickly
+    board.addEventListener("touchmove", function() {
+      clearTimeout(longPressTimer);
+    }, { passive: false });
+
+    board.addEventListener("touchend", function() {
+      clearTimeout(longPressTimer);
+    }, { passive: false });
+
+    board.addEventListener("touchcancel", function() {
+      clearTimeout(longPressTimer);
+    }, { passive: false });
+
+    // Stub for your popup logic
+    function openPiecePopup(x, y, target) {
+      console.log("Popup at", x, y, target);
+      // Replace with your actual selector popup code
     }
+  });
+}
 
-    downPos = null;
-    board.releasePointerCapture?.(e.pointerId);
-    e.preventDefault();
-  }, { passive: false });
-
-  // Fallback for older iOS Safari
-  board.addEventListener('touchstart', (e) => {
-    downTime = performance.now();
-    const t = e.changedTouches[0];
-    downPos = { x: t.clientX, y: t.clientY };
-    e.preventDefault();
-  }, { passive: false });
-
-  board.addEventListener('touchend', (e) => {
-    const t = e.changedTouches[0];
-    const dt = performance.now() - downTime;
-    const dx = Math.abs(t.clientX - (downPos?.x || t.clientX));
-    const dy = Math.abs(t.clientY - (downPos?.y || t.clientY));
-    const moved = (dx + dy) > TAP_MOVE_THRESHOLD;
-    const quick = dt < TAP_TIME_THRESHOLD;
-    if (!moved && quick) {
-      openPiecePopup(t.clientX, t.clientY, e.target);
-    }
-    downPos = null;
-    e.preventDefault();
-  }, { passive: false });
-
-  board.addEventListener('contextmenu', (e) => e.preventDefault());
-})();
 
 // end touch script disable
 
